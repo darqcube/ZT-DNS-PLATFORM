@@ -93,16 +93,16 @@ zerotrust-dns/
 ├── docker-compose.yml           # Easy deployment
 ├── build-all-binaries.sh        # Build script (Linux/Mac)
 ├── build-all-binaries.bat       # Build script (Windows)
+├── README.md
 ├── templates/
 │   ├── index.html               # Web UI main page
 │   └── download.html            # Download page
 ├── static/
 │   └── style.css                # Web UI styling
 └── docs/
-    ├── README.md                # Complete documentation
+    ├── DEPLOYMENT_OPTIONS.md    # Deployment options documentation
     ├── QUICKSTART.md            # 5-minute setup
     ├── ARCHITECTURE.md          # TLS proxy architecture
-    ├── COMPARISON.md            # Before/After comparison
     ├── DOCKER_BUILD.md          # Build instructions
     ├── SETUP.md                 # Deployment guide
     └── BINARIES.md              # Binary compilation
