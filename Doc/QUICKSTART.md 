@@ -514,7 +514,6 @@ docker-compose restart
 
 ### Documentation
 - **ARCHITECTURE.md** - How TLS proxy works
-- **COMPARISON.md** - Before/After comparison
 - **SETUP.md** - Complete deployment guide
 - **DOCKER_BUILD.md** - Build instructions
 
