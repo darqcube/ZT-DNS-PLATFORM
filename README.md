@@ -1,3 +1,5 @@
+![Logo](./image/ZeroTrustDNS+TLSProxyFlow.png)
+
 # ZeroTrust DNS Platform with TLS Proxy/Router
 
 A certificate-based Zero Trust DNS platform that provides **mTLS-authenticated DNS resolution** and **TLS proxy/router functionality** for complete end-to-end encrypted service access without exposing real service IPs.
@@ -14,32 +16,6 @@ A certificate-based Zero Trust DNS platform that provides **mTLS-authenticated D
 - **Protocol-Agnostic** - Works with HTTP, PostgreSQL, Redis, any TCP protocol
 - **JWT-Signed Configuration** - Tamper-proof deployment packages
 - **Delete Functionality** - Easy endpoint management via Web UI
-
-## 🏗️ Architecture
-```
-┌─────────────┐         mTLS DoT          ┌──────────────┐
-│   Client    │◄───────(Port 853)────────►│ DNS Server   │
-│ (endpoint)  │      Certificate Auth      │              │
-│ 127.0.0.1   │                            │   Returns    │
-└─────────────┘                            │  PROXY IP    │
-      ▲                                    └──────────────┘
-      │ DNS Query                                 │
-      │ "db.internal.corp = ?"                    │
-      │ ← "203.0.113.50" (Proxy IP!)             │
-      ▼                                           ▼
-┌─────────────┐         mTLS Proxy        ┌──────────────┐
-│  Browser /  │◄──────(Port 8443)────────►│ TLS Proxy    │
-│   Apps      │       Traffic Routing      │  Router      │
-└─────────────┘                            └──────┬───────┘
-                                                  │
-                                                  │ Routes to
-                                                  ▼
-                                           ┌──────────────┐
-                                           │   Service    │
-                                           │ (Real IP)    │
-                                           │ 10.10.10.50  │
-                                           └──────────────┘
-```
 
 ### How It Works
 
