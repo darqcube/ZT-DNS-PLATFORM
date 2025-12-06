@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html><head><title>ZeroTrust DNS</title><link rel="stylesheet" href="/static/style.css"></head>
+<body>
+<div class="container">
+  <h1>ZeroTrust DNS Platform</h1>
+
+  {% if missing_binaries %}
+  <div class="alert alert-warning">
+    <h3>⚠️  Missing Endpoint Binaries</h3>
+    <p>The following binaries are required but not found:</p>
+    <ul>
+      {% for binary in missing_binaries %}
+      <li><code>{{ binary }}</code></li>
+      {% endfor %}
+    </ul>
+    <p><strong>To build binaries:</strong></p>
+    <pre>./build-all-binaries.sh</pre>
+    <p>Client/Service creation will fail until binaries are present.</p>
+  </div>
+  {% endif %}
+
+  <div class="grid">
+    <div class="card">
+      <h2>User Client</h2>
+      <form action="/client" method="post">
+        Name: <input name="name" placeholder="Alice Laptop" required><br>
+        Platform: <select name="platform" required>
+          <option value="win-x64">Windows x64</option>
+          <option value="win-arm64">Windows ARM64</option>
+          <option value="linux-x64">Linux x86_64</option>
+          <option value="linux-arm64">Linux arm64</option>
+        </select><br>
+        <button>Generate Client</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Internal Service + DNS Zone</h2>
+      <form action="/service" method="post">
+        Service Name: <input name="name" placeholder="PostgreSQL Prod" required><br>
+        
+        <strong>Service Location</strong><br>
+        <small>Where the actual service is running</small><br>
+        Host/IP: <input name="service_host" placeholder="10.10.10.50 or service.internal" required><br>
+        Port: <input name="service_port" placeholder="5432" value="443" required><br><br>
+        
+        Domains (comma-separated):<br>
+        <input name="domains" placeholder="db.xyzzy.zong, api.xyzzy.zong" required style="width:100%"><br><br>
+
+        <strong>DNS Records (one per line)</strong><br>
+        <small>Examples:<br>
+        @       A       10.10.10.50<br>
+        www     CNAME   db.xyzzy.zong<br>
+        mail    A       10.10.10.100<br>
+        *       A       10.10.10.200<br>
+        Note: IP addresses will be replaced with proxy IP automatically
+        </small>
+        <textarea name="records" rows="10" placeholder="@ A 10.10.10.50" required 
+                  style="width:100%;font-family:monospace;"></textarea><br>
+
+        Platform: <select name="platform" required>
+          <option value="win-x64">Windows x64</option>
+          <option value="win-arm64">Windows ARM64</option>
+          <option value="linux-x64">Linux x86_64</option>
+          <option value="linux-arm64">Linux arm64</option>
+        </select><br>
+        <button style="padding:15px;font-size:16px">Generate Service + Zone</button>
+      </form>
+    </div>
+  </div>
+
+  <h2>Existing Endpoints & Zones</h2>
+  <table>
+    <tr><th>Type</th><th>Name</th><th>Domains</th><th>Service Location</th><th>Records</th><th>Download</th><th>Actions</th></tr>
+    {% for cn,data in endpoints.items() %}
+    <tr id="row-{{cn}}">
+      <td>{{ "Client" if data.type=="client" else "Service" }}</td>
+      <td>{{ data.name }}</td>
+      <td>{{ data.domains|join(', ') if data.domains else '-' }}</td>
+      <td>
+        {% if data.type == "service" %}
+          {{ data.service_host }}:{{ data.service_port }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>{{ data.records_summary|default('-')|safe }}</td>
+      <td><a href="/download/{{cn}}"><button class="btn-download">ZIP</button></a></td>
+      <td>
+        <button class="btn-delete" onclick="deleteEndpoint('{{cn}}', '{{data.name}}')">Delete</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<script>
+function deleteEndpoint(cn, name) {
+  if (!confirm(`Are you sure you want to delete "${name}"?\n\nThis will:\n- Remove the endpoint from the system\n- Delete all certificates\n- Remove DNS zone access (for services)\n\nThis action cannot be undone.`)) {
+    return;
+  }
+
+  const row = document.getElementById('row-' + cn);
+  const originalContent = row.innerHTML;
+  
+  // Show loading state
+  row.style.opacity = '0.5';
+  row.querySelectorAll('button').forEach(btn => btn.disabled = true);
+
+  fetch(`/delete/${cn}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Fade out and remove row
+      row.style.transition = 'opacity 0.3s';
+      row.style.opacity = '0';
+      setTimeout(() => {
+        row.remove();
+        // Show success message
+        showMessage(data.message, 'success');
+      }, 300);
+    } else {
+      // Restore row and show error
+      row.style.opacity = '1';
+      row.querySelectorAll('button').forEach(btn => btn.disabled = false);
+      showMessage('Error: ' + data.error, 'error');
+    }
+  })
+  .catch(error => {
+    // Restore row on network error
+    row.style.opacity = '1';
+    row.querySelectorAll('button').forEach(btn => btn.disabled = false);
+    showMessage('Network error: ' + error.message, 'error');
+  });
+}
+
+function showMessage(text, type) {
+  const msg = document.createElement('div');
+  msg.className = 'message message-' + type;
+  msg.textContent = text;
+  document.body.appendChild(msg);
+  
+  setTimeout(() => {
+    msg.style.opacity = '0';
+    setTimeout(() => msg.remove(), 300);
+  }, 3000);
+}
+</script>
+
+</body></html>

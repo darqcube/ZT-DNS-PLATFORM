@@ -1,0 +1,90 @@
+# ZeroTrust DNS Server with Python Endpoint Binaries
+# This builds Python binaries using PyInstaller (Linux only)
+# For Windows/ARM64 binaries, see manual compilation instructions
+
+FROM python:3.11-slim AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    binutils \
+    upx-ucl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python build dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    pyinstaller==6.3.0 \
+    jwcrypto==1.5.6 \
+    cryptography==41.0.7 \
+    httpx==0.25.2
+
+WORKDIR /build
+
+# Copy Python endpoint source
+COPY endpoint.py .
+COPY requirements.txt .
+
+# Build Linux x86_64 binary
+RUN pyinstaller --onefile \
+    --name ZeroTrust-Client-x86_64 \
+    --strip \
+    --noupx \
+    --clean \
+    endpoint.py
+
+RUN cp dist/ZeroTrust-Client-x86_64 dist/ZeroTrust-Service-x86_64
+
+# Note: PyInstaller cannot cross-compile to Windows or ARM64
+# These must be built on their respective platforms
+RUN echo "⚠️  Windows and ARM64 binaries require building on native platforms" && \
+    echo "See DOCKER_BUILD.md for instructions"
+
+# ============================================
+# Final runtime image
+# ============================================
+FROM python:3.11-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    flask==3.0.0 \
+    jwcrypto==1.5.6 \
+    dnslib==0.9.24 \
+    httpx==0.25.2 \
+    cryptography==41.0.7
+
+# Create application structure
+RUN mkdir -p /opt/zerotrust-dns/certs \
+    /opt/zerotrust-dns/data \
+    /opt/zerotrust-dns/binaries \
+    /app/templates \
+    /app/static
+
+WORKDIR /app
+
+# Copy Python binaries from builder stage (Linux x64 only)
+COPY --from=builder /build/dist/ZeroTrust-* /opt/zerotrust-dns/binaries/
+
+# Copy application files
+COPY server.py .
+COPY templates/ templates/
+COPY static/ static/
+
+# Expose ports
+# 5001 - Web interface
+# 853  - DNS over TLS (mTLS)
+# 8443 - Service Proxy/Router (mTLS)
+EXPOSE 5001 853 8443
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python3 -c "import socket; s=socket.socket(); s.connect(('127.0.0.1', 5001)); s.close()" || exit 1
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python3", "server.py"]

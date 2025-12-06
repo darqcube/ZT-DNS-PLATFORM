@@ -1,0 +1,547 @@
+# ZeroTrust DNS with TLS Proxy - Quick Start Guide
+
+Get your Zero Trust DNS platform with TLS proxy/router running in 5 minutes!
+
+## What This Does
+
+Your DNS server acts as both:
+1. **DNS Resolver** - Answers DNS queries for private domains
+2. **TLS Proxy/Router** - Routes client traffic to actual services
+
+Clients **never know** the real service IPs. Everything is routed through the DNS server.
+
+## Quick Setup (5 Minutes)
+
+### 1. Start the Server
+
+#### Option A: Docker (Easiest)
+```bash
+# Clone repository
+git clone <your-repo-url>
+cd zerotrust-dns
+
+# Build and start
+docker-compose up -d
+
+# Check logs
+docker-compose logs -f
+```
+
+#### Option B: Manual
+```bash
+# Install dependencies
+pip3 install -r requirements.txt
+
+# Build binaries
+chmod +x build-all-binaries.sh
+./build-all-binaries.sh
+
+# Start server
+python3 server.py
+```
+
+**Expected Output:**
+```
+ZeroTrust DNS Server detected IP: 203.0.113.50
+  - DNS over TLS: 203.0.113.50:853
+  - Service Proxy: 203.0.113.50:8443
+✓ DNS over TLS server started on port 853
+✓ TLS Proxy/Router started on port 8443
+
+============================================================
+✓ ZeroTrust DNS Platform Running
+============================================================
+  Web UI:         http://127.0.0.1:5001
+  DNS over TLS:   203.0.113.50:853
+  Service Proxy:  203.0.113.50:8443
+============================================================
+```
+
+### 2. Create a Service
+
+1. Open web UI: `http://YOUR-SERVER:5001`
+2. Fill in **Internal Service + DNS Zone**:
+```
+   Service Name: PostgreSQL Production
+   Service Host: 10.10.10.50          ← Actual server IP
+   Service Port: 5432
+   Domains: db.internal.corp
+   DNS Records:
+     @ A AUTO_FILLED
+   Platform: Linux x86_64
+```
+3. Click **Generate Service + Zone**
+4. Download ZIP
+
+**What happens:**
+- DNS record: `db.internal.corp → 203.0.113.50` (proxy IP, not 10.10.10.50!)
+- Routing entry: `db.internal.corp → 10.10.10.50:5432` (real service)
+
+### 3. Create a Client
+
+1. Fill in **User Client**:
+```
+   Name: Admin Laptop
+   Platform: Linux x86_64
+```
+2. Download ZIP
+3. Extract on client machine
+4. Run: `sudo ./ZeroTrust-Client-x86_64`
+
+**Expected Output:**
+```
+2024/12/05 10:30:45 ZeroTrust CLIENT Endpoint Active → 203.0.113.50:853
+2024/12/05 10:30:45 Local DNS listening on 127.0.0.1:53
+```
+
+### 4. Configure Client DNS
+
+**Linux:**
+```bash
+echo "nameserver 127.0.0.1" | sudo tee /etc/resolv.conf
+```
+
+**Windows:**
+- Network Settings → DNS → `127.0.0.1`
+
+**macOS:**
+- System Preferences → Network → Advanced → DNS → Add `127.0.0.1`
+
+### 5. Test It!
+```bash
+# Test DNS resolution
+nslookup db.internal.corp 127.0.0.1
+# Returns: 203.0.113.50 (proxy server, not 10.10.10.50!)
+
+# Test actual connection (PostgreSQL example)
+psql "host=db.internal.corp port=8443 user=admin dbname=prod"
+# Connects through proxy to 10.10.10.50:5432
+```
+
+## How Traffic Flows
+```
+Your App: "Connect to db.internal.corp"
+   ↓
+1. DNS Query: db.internal.corp = ?
+   Client Endpoint → DNS Server (mTLS on port 853)
+   ← Response: 203.0.113.50 (PROXY IP!)
+   
+2. App connects to 203.0.113.50:8443
+   Client Endpoint → Proxy Server (mTLS)
+   
+3. Proxy reads: "Host: db.internal.corp"
+   Proxy looks up: db.internal.corp → 10.10.10.50:5432
+   
+4. Proxy forwards to real service
+   Proxy → 10.10.10.50:5432
+   
+5. Bidirectional tunnel
+   App ↔ Client ↔ Proxy ↔ Service
+```
+
+**Result:** Client never sees 10.10.10.50! 🎉
+
+## Real-World Examples
+
+### Example 1: PostgreSQL Database
+
+**Server Setup:**
+```
+Service Name: PostgreSQL Prod
+Service Host: 10.10.10.50
+Service Port: 5432
+Domains: db.internal.corp
+```
+
+**Client Usage:**
+```bash
+# Standard psql connection - works transparently!
+psql "host=db.internal.corp port=8443 user=admin password=secret dbname=production"
+
+# Or with connection string
+export DATABASE_URL="postgresql://admin:secret@db.internal.corp:8443/production"
+python manage.py migrate
+```
+
+### Example 2: Internal API
+
+**Server Setup:**
+```
+Service Name: Internal API
+Service Host: 10.20.30.40
+Service Port: 443
+Domains: api.internal.corp
+```
+
+**Client Usage:**
+```bash
+# HTTPS request - works transparently!
+curl https://api.internal.corp:8443/users
+
+# Or in application code
+fetch('https://api.internal.corp:8443/api/data')
+```
+
+### Example 3: Redis Cache
+
+**Server Setup:**
+```
+Service Name: Redis Cache
+Service Host: 10.10.10.60
+Service Port: 6379
+Domains: cache.internal.corp
+```
+
+**Client Usage:**
+```bash
+# Redis CLI
+redis-cli -h cache.internal.corp -p 8443
+
+# In Python
+import redis
+r = redis.Redis(host='cache.internal.corp', port=8443)
+r.set('key', 'value')
+```
+
+### Example 4: Multiple Services
+
+**Server Setup:**
+```
+Service 1: db.internal.corp → 10.10.10.50:5432
+Service 2: api.internal.corp → 10.20.30.40:443
+Service 3: cache.internal.corp → 10.10.10.60:6379
+```
+
+**Client Usage:**
+```bash
+# Client can access all services through same endpoint
+psql "host=db.internal.corp port=8443..."
+curl https://api.internal.corp:8443/health
+redis-cli -h cache.internal.corp -p 8443 ping
+```
+
+## Architecture Comparison
+
+### Old Way (Standard DNS)
+```
+Client → DNS: db.internal.corp = ?
+       ← 10.10.10.50 (REAL IP EXPOSED!)
+Client → connects directly to 10.10.10.50:5432
+```
+❌ Client knows real IP  
+❌ Direct connection  
+❌ Need firewall rules
+
+### New Way (TLS Proxy)
+```
+Client → DNS: db.internal.corp = ?
+       ← 203.0.113.50 (PROXY IP)
+Client → connects to 203.0.113.50:8443
+Proxy  → routes to 10.10.10.50:5432
+```
+✅ Client never knows real IP  
+✅ All traffic through proxy  
+✅ No client firewall rules needed
+
+## Key Benefits
+
+### 1. Hidden Service IPs
+```bash
+# Client tries to find real IP
+dig db.internal.corp
+# Returns: 203.0.113.50 (proxy server only!)
+
+# Client can't directly reach 10.10.10.50
+# Can only access through proxy with valid certificate
+```
+
+### 2. Centralized Access Control
+```bash
+# Revoke client access instantly
+curl -X POST http://localhost:5001/delete/c1234abcd
+
+# Client immediately loses access to ALL services
+# No firewall rule updates needed
+```
+
+### 3. Service Mobility
+```bash
+# Move PostgreSQL from 10.10.10.50 to 10.10.10.99
+# Just update routing table - clients don't notice!
+
+# Edit /opt/zerotrust-dns/data/routes.json
+{
+  "s1234abcd": {
+    "host": "10.10.10.99",  # Changed!
+    "port": 5432
+  }
+}
+
+# Restart server
+docker-compose restart
+# Done! Clients continue working without any changes
+```
+
+### 4. Protocol Transparency
+
+Works with **any TCP protocol**:
+- ✅ HTTP/HTTPS
+- ✅ PostgreSQL, MySQL, MongoDB
+- ✅ Redis, Memcached
+- ✅ SSH, RDP
+- ✅ Custom protocols
+
+## Port Reference
+
+| Port | Purpose | Access |
+|------|---------|--------|
+| **5001** | Web UI | Admin (localhost) |
+| **853** | DNS Resolver | Clients (mTLS) |
+| **8443** | Service Proxy/Router | Clients (mTLS) |
+
+**Firewall Rules:**
+```bash
+# On DNS server
+sudo ufw allow 853/tcp   # DNS over TLS
+sudo ufw allow 8443/tcp  # Service Proxy
+sudo ufw allow 5001/tcp  # Web UI (optional)
+```
+
+## Troubleshooting
+
+### Client gets "connection refused"
+```bash
+# Check proxy is running
+docker exec zerotrust-dns netstat -tlnp | grep 8443
+
+# Should show: tcp 0.0.0.0:8443 LISTEN
+```
+
+### Connection times out
+```bash
+# Check firewall allows proxy port
+sudo ufw status | grep 8443
+
+# Check service is reachable FROM proxy server
+docker exec zerotrust-dns telnet 10.10.10.50 5432
+```
+
+### DNS works but connection fails
+```bash
+# Check routing table exists
+docker exec zerotrust-dns cat /opt/zerotrust-dns/data/routes.json
+
+# Verify entry for your domain
+```
+
+### "No route to service" error
+```bash
+# Proxy can't determine which service to route to
+# Check zone has service_cn field
+
+cat /opt/zerotrust-dns/data/zones.json
+# Should show: "service_cn": "s1234abcd"
+```
+
+### Binary not found error
+```bash
+# Build binaries
+./build-all-binaries.sh
+
+# Or rebuild Docker image
+docker-compose build
+docker-compose up -d
+```
+
+## Monitoring Connections
+
+### View Active Routes
+```bash
+docker exec zerotrust-dns python3 -c "
+import json
+from pathlib import Path
+print(json.dumps(json.loads(Path('/opt/zerotrust-dns/data/routes.json').read_text()), indent=2))
+"
+```
+
+### Check DNS Zones
+```bash
+docker exec zerotrust-dns python3 -c "
+import json
+from pathlib import Path
+print(json.dumps(json.loads(Path('/opt/zerotrust-dns/data/zones.json').read_text()), indent=2))
+"
+```
+
+### View Proxy Logs
+```bash
+docker logs -f zerotrust-dns | grep Proxy
+
+# Should show:
+# Proxy: Client c1234abcd connected from 192.168.1.100
+# Proxy: Routing c1234abcd → s5678efgh (10.10.10.50:5432)
+# Proxy: Connected to service 10.10.10.50:5432
+```
+
+### View All Endpoints
+```bash
+docker exec zerotrust-dns python3 -c "
+import json
+from pathlib import Path
+endpoints = json.loads(Path('/opt/zerotrust-dns/data/endpoints.json').read_text())
+for cn, data in endpoints.items():
+    print(f'{data[\"type\"].upper()}: {data[\"name\"]} ({cn})')
+"
+```
+
+## Common Use Cases
+
+### Use Case 1: Development Environment
+
+**Setup:**
+```
+Services:
+- dev-db.internal.corp → 10.10.10.100:5432
+- dev-api.internal.corp → 10.10.10.101:3000
+- dev-redis.internal.corp → 10.10.10.102:6379
+
+Clients:
+- Developer laptops
+- CI/CD servers
+```
+
+**Benefits:**
+- Developers never need VPN
+- Easy to add/remove access
+- Services can move without config changes
+
+### Use Case 2: Multi-Region Deployment
+
+**Setup:**
+```
+US Region:
+- db-us.internal.corp → 10.10.10.50:5432
+
+EU Region:
+- db-eu.internal.corp → 10.20.10.50:5432
+
+Clients route to nearest region automatically
+```
+
+### Use Case 3: Staging + Production
+
+**Setup:**
+```
+Staging:
+- db-staging.internal.corp → 10.10.10.50:5432
+- api-staging.internal.corp → 10.10.10.51:443
+
+Production:
+- db-prod.internal.corp → 10.20.10.50:5432
+- api-prod.internal.corp → 10.20.10.51:443
+
+Different clients authorized for different environments
+```
+
+## Production Checklist
+
+Before going live:
+
+- [ ] Server running with systemd
+- [ ] Firewall configured (ports 853, 8443)
+- [ ] Binaries compiled for all platforms
+- [ ] Test client working
+- [ ] Test service accessible through proxy
+- [ ] DNS resolution tested (public and private)
+- [ ] Backup strategy implemented
+- [ ] Monitoring configured
+- [ ] Documentation for team
+
+## Next Steps
+
+1. ✅ **Create more clients** - Add your team members
+2. ✅ **Add services** - Database, APIs, caches
+3. ✅ **Test failover** - Move services, test continuity
+4. 📊 **Set up monitoring** - Track connections and usage
+5. 🔒 **Implement backup** - Automate certificate backups
+6. 📝 **Document domains** - Maintain DNS zone documentation
+
+## Advanced Features
+
+### Delete Endpoints
+
+1. Go to Web UI
+2. Find endpoint in table
+3. Click **Delete** button
+4. Confirm deletion
+5. Endpoint, certificates, and routes removed instantly
+
+### Update Service Location
+```bash
+# Edit routing table
+nano /opt/zerotrust-dns/data/routes.json
+
+# Change host or port
+{
+  "s1234abcd": {
+    "host": "10.10.10.99",  # Updated
+    "port": 5432
+  }
+}
+
+# Restart
+docker-compose restart
+```
+
+### Add Client to Service
+```bash
+# Edit zones
+nano /opt/zerotrust-dns/data/zones.json
+
+# Add client CN to allowed_endpoints
+{
+  "db.internal.corp": {
+    "allowed_endpoints": ["c1234abcd", "c5678efgh"],  # Added new client
+    "service_cn": "s1234abcd"
+  }
+}
+
+# Restart
+docker-compose restart
+```
+
+## Getting Help
+
+### Documentation
+- **ARCHITECTURE.md** - How TLS proxy works
+- **COMPARISON.md** - Before/After comparison
+- **SETUP.md** - Complete deployment guide
+- **DOCKER_BUILD.md** - Build instructions
+
+### Support Channels
+- GitHub Issues
+- GitHub Discussions
+- Project Documentation
+
+## Summary
+
+You now have:
+- ✅ DNS server resolving private domains
+- ✅ TLS proxy routing all service traffic
+- ✅ Clients never seeing real service IPs
+- ✅ Certificate-based access control
+- ✅ Easy management via Web UI
+
+**Total setup time:** ~5 minutes 🚀
+
+**Traffic flow:**
+```
+Client → DNS (get proxy IP) → Proxy (route to service) → Service
+       ← Encrypted connection ← End-to-end mTLS ← Hidden IP
+```
+
+---
+
+**Congratulations!** Your Zero Trust DNS platform with TLS proxy is ready! 🎉
+
+For production deployment, see **SETUP.md** for detailed instructions.
