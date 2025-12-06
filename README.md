@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# ZT-DNS-PLATFORM
-A certificate-based Zero Trust DNS platform that provides **mTLS-authenticated DNS resolution** and **TLS proxy/router functionality** for complete end-to-end encrypted service access without exposing real service IPs.
-=======
 # ZeroTrust DNS Platform with TLS Proxy/Router
 
 A certificate-based Zero Trust DNS platform that provides **mTLS-authenticated DNS resolution** and **TLS proxy/router functionality** for complete end-to-end encrypted service access without exposing real service IPs.
@@ -390,4 +386,3 @@ If you find this project useful, please consider giving it a star on GitHub!
 **Status:** Production Ready ✅
 
 🚀 **Ready to deploy your Zero Trust DNS platform with TLS proxy!**
->>>>>>> 6929f93 (initial commit)
