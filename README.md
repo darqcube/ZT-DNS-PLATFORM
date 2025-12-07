@@ -329,7 +329,7 @@ MIT License - See LICENSE file
 - Go JWT library: [golang-jwt/jwt](https://github.com/golang-jwt/jwt)
 - Python DNS: [dnslib](https://github.com/paulc/dnslib)
 - Flask web framework
-- Cloudflare DNS (1.1.1.1) for public resolution
+- Cloudflare DNS (1.1.1.1) for public resolution. You can also modify this IP address.
 
 ## 📞 Support
 
