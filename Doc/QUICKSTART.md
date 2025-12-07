@@ -2,7 +2,6 @@
 
 Get your Zero Trust DNS platform with TLS proxy/router running in 5 minutes!
 
-
 ## What This Does
 
 Your DNS server acts as both:
