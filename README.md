@@ -345,7 +345,7 @@ MIT License - See LICENSE file
 - [x] Multi-platform binaries
 - [x] Delete functionality
 - [ ] Load balancing across multiple services
-- [ ] multi-factor authentication and single sign-on (SSO)
+- [ ] Multi-factor authentication and single sign-on (SSO)
 - [ ] Health checks and automatic failover
 - [ ] Metrics and monitoring dashboard
 - [ ] Certificate rotation automation
