@@ -1,8 +1,8 @@
-![Logo](./image/ZeroTrustDNS+TLSProxyFlow.png)
-
 # ZeroTrust DNS Platform with TLS Proxy/Router
 
 A certificate-based Zero Trust DNS platform that provides **mTLS-authenticated DNS resolution** and **TLS proxy/router functionality** for complete end-to-end encrypted service access without exposing real service IPs.
+
+![Logo](./image/ZeroTrustDNS+TLSProxyFlow.png)
 
 ## 🎯 Key Features
 
