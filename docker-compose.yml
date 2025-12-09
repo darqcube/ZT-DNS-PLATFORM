@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   zerotrust-dns:
     build:
       context: .
-      dockerfile: Dockerfile.go  # Use Dockerfile.go or Dockerfile.python
-    container_name: zerotrust-dns-server
+      dockerfile: Dockerfile.go
+    container_name: zerotrust-dns
     hostname: zerotrust-dns
     
     ports:
@@ -14,11 +12,8 @@ services:
       - "8443:8443"  # Service Proxy/Router
     
     volumes:
-      # Persist certificates and data
       - ./data/certs:/opt/zerotrust-dns/certs
       - ./data/data:/opt/zerotrust-dns/data
-      # Optional: Mount custom binaries
-      # - ./custom-binaries:/opt/zerotrust-dns/binaries
     
     environment:
       - PYTHONUNBUFFERED=1
@@ -27,7 +22,7 @@ services:
     restart: unless-stopped
     
     networks:
-      - zerotrust-net
+      - zerotrust
     
     healthcheck:
       test: ["CMD", "python3", "-c", "import socket; s=socket.socket(); s.connect(('127.0.0.1', 5001)); s.close()"]
@@ -43,9 +38,6 @@ services:
         max-file: "3"
 
 networks:
-  zerotrust-net:
+  zerotrust:
     driver: bridge
-
-volumes:
-  certs:
   data:

@@ -13,9 +13,9 @@ docker-compose up -d
 open http://localhost:5001
 ```
 
-## Dockerfile Options
+## Dockerfile
 
-### Option 1: Dockerfile.go (Recommended)
+### Dockerfile.go
 
 **Advantages:**
 - ✅ Builds all 8 binaries (4 platforms × 2 types)
@@ -36,23 +36,6 @@ open http://localhost:5001
 docker build -f Dockerfile.go -t zerotrust-dns:latest .
 ```
 
-### Option 2: Dockerfile.python (Alternative)
-
-**Advantages:**
-- ✅ No Go installation required
-- ✅ Easier to debug and customize
-- ✅ Python endpoint included
-
-**Disadvantages:**
-- ⚠️ Only creates Linux x64 binaries in Docker
-- ⚠️ Windows and ARM64 binaries must be built manually
-- ⚠️ Larger binaries (~15-30 MB vs ~5-8 MB)
-
-**Build:**
-```bash
-docker build -f Dockerfile.python -t zerotrust-dns:python .
-```
-
 ## Docker Compose Deployment
 
 ### Basic Setup
@@ -65,7 +48,7 @@ services:
   zerotrust-dns:
     build:
       context: .
-      dockerfile: Dockerfile.go  # or Dockerfile.python
+      dockerfile: Dockerfile.go
     container_name: zerotrust-dns-server
     ports:
       - "5001:5001"  # Web UI
@@ -100,11 +83,8 @@ docker-compose restart
 
 ### Build Image
 ```bash
-# Build with Go binaries (recommended)
+# Build with Go binaries
 docker build -f Dockerfile.go -t zerotrust-dns:latest .
-
-# Build with Python binaries
-docker build -f Dockerfile.python -t zerotrust-dns:python .
 
 # Check image size
 docker images zerotrust-dns
@@ -302,55 +282,7 @@ docker cp ./backup/data-20241205/ zerotrust-dns:/opt/zerotrust-dns/data
 
 # Start container
 docker start zerotrust-dns
-```
-
-## Custom Binary Injection
-
-### Method 1: Volume Mount
-```bash
-# Build binaries locally
-./build-all-binaries.sh
-
-# Mount custom binaries
-docker run -d \
-  -p 5001:5001 -p 853:853 -p 8443:8443 \
-  -v $(pwd)/binaries:/opt/zerotrust-dns/binaries \
-  --name zerotrust-dns \
-  zerotrust-dns:latest
-```
-
-### Method 2: Copy into Running Container
-```bash
-# Copy binaries to running container
-docker cp ./binaries/. zerotrust-dns:/opt/zerotrust-dns/binaries/
-
-# Verify
-docker exec zerotrust-dns ls -lh /opt/zerotrust-dns/binaries/
-
-# Restart container
-docker restart zerotrust-dns
-```
-
-### Method 3: Build Custom Image
-
-Create `Dockerfile.custom`:
-```dockerfile
-FROM zerotrust-dns:latest
-
-# Copy your pre-built binaries
-COPY ./my-binaries/ /opt/zerotrust-dns/binaries/
-
-# Make executable
-RUN chmod +x /opt/zerotrust-dns/binaries/ZeroTrust-*
-```
-
-Build:
-```bash
-docker build -f Dockerfile.custom -t zerotrust-dns:custom .
-docker run -d -p 5001:5001 -p 853:853 -p 8443:8443 zerotrust-dns:custom
-```
-
-## Environment Variables
+## Troubleshooting
 
 ### Available Variables
 ```yaml
@@ -678,8 +610,8 @@ docker scan zerotrust-dns:latest
 
 **Recommended Workflow:**
 
-1. **For Production:** Use `Dockerfile.go` - builds everything automatically
-2. **For Development:** Use `build-all-binaries.sh` - fast local builds
+1. **For Production:** Use `docker compose up -d` - builds everything automatically
+2. **For Development:** Run `python3 server.py` directly
 3. **For CI/CD:** Use GitHub Actions - automated multi-platform builds
 
 **Quick Commands:**

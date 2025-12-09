@@ -45,11 +45,10 @@ open http://localhost:5001
 # Install dependencies
 pip3 install -r requirements.txt
 
-# Build binaries
-chmod +x build-all-binaries.sh
-./build-all-binaries.sh
+# Start server with Docker
+docker compose up -d
 
-# Start server
+# Or run server directly
 python3 server.py
 
 # Access web interface
@@ -60,28 +59,23 @@ open http://localhost:5001
 ```
 zerotrust-dns/
 ├── server.py                    # Main DNS + TLS proxy server
-├── endpoint.go                  # Go endpoint (recommended)
-├── endpoint.py                  # Python endpoint (alternative)
+├── endpoint.go                  # Go endpoint client
 ├── go.mod / go.sum              # Go dependencies
 ├── requirements.txt             # Python dependencies
-├── Dockerfile.go                # Docker build (Go binaries)
-├── Dockerfile.python            # Docker build (Python binaries)
+├── Dockerfile.go                # Docker build
 ├── docker-compose.yml           # Easy deployment
-├── build-all-binaries.sh        # Build script (Linux/Mac)
-├── build-all-binaries.bat       # Build script (Windows)
 ├── README.md
 ├── templates/
 │   ├── index.html               # Web UI main page
 │   └── download.html            # Download page
 ├── static/
 │   └── style.css                # Web UI styling
-└── docs/
+└── Doc/
     ├── DEPLOYMENT_OPTIONS.md    # Deployment options documentation
     ├── QUICKSTART.md            # 5-minute setup
     ├── ARCHITECTURE.md          # TLS proxy architecture
     ├── DOCKER_BUILD.md          # Build instructions
-    ├── SETUP.md                 # Deployment guide
-    └── BINARIES.md              # Binary compilation
+    └── SETUP.md                 # Deployment guide
 ```
 
 ## 🔧 Usage
@@ -134,17 +128,18 @@ zerotrust-dns/
 
 ## 🎓 Documentation
 
-- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** - Get started in 5 minutes
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Deep dive into TLS proxy architecture
-- **[docs/DOCKER_BUILD.md](docs/DOCKER_BUILD.md)** - Docker and binary compilation
-- **[docs/SETUP.md](docs/SETUP.md)** - Complete deployment guide
-- **[docs/BINARIES.md](docs/BINARIES.md)** - Binary compilation detailed guide
+- **[Doc/QUICKSTART.md](Doc/QUICKSTART.md)** - Get started in 5 minutes
+- **[Doc/ARCHITECTURE.md](Doc/ARCHITECTURE.md)** - Deep dive into TLS proxy architecture
+- **[Doc/DOCKER_BUILD.md](Doc/DOCKER_BUILD.md)** - Docker build and deployment
+- **[Doc/SETUP.md](Doc/SETUP.md)** - Complete deployment guide
 
-## 🛠️ Building Binaries
+## 🛠️ Building with Docker
 
-### Automatic (Docker)
 ```bash
 # Build Docker image with all binaries included
+docker compose up -d --build
+
+# Or build manually
 docker build -f Dockerfile.go -t zerotrust-dns .
 
 # Extract binaries (optional)
@@ -153,16 +148,7 @@ docker cp temp:/opt/zerotrust-dns/binaries/. ./binaries/
 docker rm temp
 ```
 
-### Manual (Go)
-```bash
-# Linux/macOS
-./build-all-binaries.sh
-
-# Windows
-build-all-binaries.bat
-```
-
-This creates 8 binaries:
+Docker automatically builds 8 binaries:
 - ✅ Windows x64 Client + Service
 - ✅ Windows ARM64 Client + Service
 - ✅ Linux x64 Client + Service
@@ -223,11 +209,11 @@ fetch('https://api.internal.corp/api/data')
 
 ### "Binary not found" error
 ```bash
-# Build binaries
-./build-all-binaries.sh
+# Rebuild Docker image
+docker compose up -d --build
 
-# Verify
-ls -lh binaries/
+# Verify binaries in container
+docker exec zerotrust-dns ls -lh /opt/zerotrust-dns/binaries/
 ```
 
 ### Client can't connect to server

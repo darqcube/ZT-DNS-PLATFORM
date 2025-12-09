@@ -1,16 +1,16 @@
-# ZeroTrust DNS - Deployment Options Guide
+# ZeroTrust DNS - Deployment Guide
 
-## Overview
+## Quick Overview
 
-This guide helps you choose the right deployment method for your ZeroTrust DNS Platform based on your requirements, infrastructure, and expertise level.
+**Recommended: Docker (5 minutes)**
+```bash
+docker compose up -d
+open http://localhost:5001
+```
 
-## Available Documentation
+---
 
-We provide three deployment guides, each optimized for different use cases:
-
-1. **QUICKSTART.md** - Fast deployment for testing and demos
-2. **SETUP.md** - Complete production deployment on bare metal
-3. **DOCKER_BUILD.md** - Container-based deployment with Docker/Kubernetes
+## Deployment Options
 
 ## Quick Comparison
 

@@ -255,4 +255,43 @@ func forwardToServer(query []byte, config *Config, tlsConfig *tls.Config) []byte
 	length := uint16(len(query))
 	lengthBytes := []byte{byte(length >> 8), byte(length & 0xff)}
 	
-	if _, err := conn.W
+	if _, err := conn.Write(append(lengthBytes, query...)); err != nil {
+		log.Printf("Failed to send DNS query: %v", err)
+		return nil
+	}
+
+	// Read length-prefixed DNS response
+	respLenBuf := make([]byte, 2)
+	if _, err := conn.Read(respLenBuf); err != nil {
+		log.Printf("Failed to read DNS response length: %v", err)
+		return nil
+	}
+
+	respLen := int(respLenBuf[0])<<8 | int(respLenBuf[1])
+	if respLen <= 0 || respLen > 4096 {
+		log.Printf("Invalid DNS response length: %d", respLen)
+		return nil
+	}
+
+	resp := make([]byte, respLen)
+	if _, err := conn.Read(resp); err != nil {
+		log.Printf("Failed to read DNS response: %v", err)
+		return nil
+	}
+
+	return resp
+}
+
+func main() {
+	config, err := loadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	tlsConfig, err := setupTLS(config)
+	if err != nil {
+		log.Fatalf("Failed to set up TLS: %v", err)
+	}
+
+	startLocalDNS(config, tlsConfig)
+}

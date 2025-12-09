@@ -7,4 +7,4 @@ cryptography==41.0.7
 
 # Optional: For Python endpoint compilation with PyInstaller
 # Uncomment if you want to build Python binaries
-# pyinstaller==6.3.0
+pyinstaller==6.3.0

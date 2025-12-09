@@ -1,25 +1,36 @@
-# ZeroTrust DNS Platform - Complete Production Level Setup Guide
+# ZeroTrust DNS Platform - Setup Guide
 
-## Prerequisites
+## Quick Start (Recommended)
 
-### Server Requirements
+**Using Docker (5 minutes):**
+```bash
+# Clone repository
+git clone <repo-url>
+cd ZT-DNS-PLATFORM
+
+# Start with Docker Compose
+docker compose up -d
+
+# Access web UI
+open http://localhost:5001
+```
+
+**That's it!** All binaries are built automatically inside the Docker image.
+
+---
+
+## Manual Setup (Advanced)
+
+For bare-metal deployments without Docker:
+
+### Prerequisites
+
 - Linux/Unix system (Ubuntu 20.04+ recommended)
 - Python 3.8+
 - OpenSSL
 - Root access (for ports 853, 8443)
 - 2GB RAM minimum
 - 10GB disk space
-
-### For Binary Compilation
-- **Go version:** Go 1.19+ (recommended for building binaries)
-- **Python version:** Python 3.8+ with PyInstaller (alternative)
-
-### Network Requirements
-- Public IP or accessible server
-- Ports available: 5001 (Web UI), 853 (DNS), 8443 (Proxy)
-- Firewall access for clients
-
-## Step-by-Step Installation
 
 ### 1. Install System Dependencies
 
@@ -29,14 +40,10 @@
 sudo apt update && sudo apt upgrade -y
 
 # Install required packages
-sudo apt install -y python3 python3-pip openssl git wget
+sudo apt install -y python3 python3-pip openssl git
 
-# Install Go (for binary compilation)
-wget https://go.dev/dl/go1.23.4.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.23.4.linux-amd64.tar.gz
-echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
-source ~/.bashrc
-go version
+# Verify Python
+python3 --version  # Should be 3.8+
 ```
 
 #### CentOS/RHEL
@@ -45,58 +52,59 @@ go version
 sudo yum update -y
 
 # Install required packages
-sudo yum install -y python3 python3-pip openssl git wget
-
-# Install Go
-wget https://go.dev/dl/go1.23.4.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.23.4.linux-amd64.tar.gz
-echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
-source ~/.bashrc
+sudo yum install -y python3 python3-pip openssl git
 ```
 
-### 2. Install Python Dependencies
+### 2. Clone Repository
 ```bash
-# Create project directory
-sudo mkdir -p /opt/zerotrust-dns
+git clone <repo-url> /opt/zerotrust-dns
 cd /opt/zerotrust-dns
+```
 
-# Clone or copy project files here
-# (Copy all files from your repository)
-
-# Install Python dependencies
+### 3. Install Python Dependencies
+```bash
+# Install requirements
 pip3 install -r requirements.txt
 
 # Verify installation
-python3 -c "import flask, jwcrypto, dnslib, httpx; print('✓ All dependencies installed')"
+python3 -c "import flask, jwcrypto, dnslib, httpx; print('✓ All dependencies OK')"
 ```
 
-### 3. Set Up Directory Structure
+### 4. Create Directory Structure
 ```bash
-# Create necessary directories
-sudo mkdir -p /opt/zerotrust-dns/{certs,data,binaries,templates,static}
+# Create directories
+sudo mkdir -p /opt/zerotrust-dns/{certs,data,binaries}
 
 # Set permissions
 sudo chown -R $USER:$USER /opt/zerotrust-dns
 
-# Verify structure
-tree -L 1 /opt/zerotrust-dns
+# Create binaries directory for pre-built binaries
+mkdir -p binaries
 ```
 
-Expected structure:
+### 5. Copy Binaries
+
+**Option A: Extract from Docker image**
+```bash
+docker create --name temp zerotrust-dns
+docker cp temp:/opt/zerotrust-dns/binaries/. ./binaries/
+docker rm temp
 ```
-/opt/zerotrust-dns/
-├── server.py
-├── endpoint.go
-├── endpoint.py
-├── go.mod
-├── go.sum
-├── requirements.txt
-├── build-all-binaries.sh
-├── templates/
-├── static/
-├── certs/          (auto-generated)
-├── data/           (auto-generated)
-└── binaries/       (after build)
+
+**Option B: Use pre-built binaries**
+- Download binaries from releases page
+- Place in `./binaries/` directory
+
+### 6. Start Server
+```bash
+# Run server
+python3 server.py
+
+# Expected output:
+# ZeroTrust DNS Server detected IP: <your-ip>
+# ✓ Certificates generated
+# ✓ ZeroTrust DNS Platform Running
+#   Web UI: http://0.0.0.0:5001
 ```
 
 ### 4. Compile Endpoint Binaries
