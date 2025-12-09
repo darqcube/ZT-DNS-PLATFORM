@@ -29,14 +29,14 @@ The ZeroTrust DNS Platform combines DNS resolution with TLS proxy/router functio
     ║   │ - Returns: 203.0.113.50  │     ║ (2) DNS Response
     ║   │   (PROXY server IP!)     │     ║     db.internal.corp = 203.0.113.50
     ║   └──────────────────────────┘     ║
-    ║                                     ║
+    ║                                    ║
     ║   ┌──────────────────────────┐     ║
     ║   │ TLS Proxy (Port 8443)    │     ║
     ║   │ - Validates client cert  │     ║ (3) Client connects to
     ║   │ - Reads SNI/Host header  │     ║     203.0.113.50:8443
     ║   │ - Routes to real service │     ║
     ║   └──────────────────────────┘     ║
-    ║                                     ║
+    ║                                    ║
     ║   ┌──────────────────────────┐     ║
     ║   │ Routing Table            │     ║
     ║   │ db.internal.corp →       │     ║
