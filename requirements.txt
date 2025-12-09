@@ -4,7 +4,3 @@ jwcrypto==1.5.6
 dnslib==0.9.24
 httpx==0.25.2
 cryptography==41.0.7
-
-# Optional: For Python endpoint compilation with PyInstaller
-# Uncomment if you want to build Python binaries
-pyinstaller==6.3.0
